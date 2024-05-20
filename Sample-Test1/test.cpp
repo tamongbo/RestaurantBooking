@@ -7,52 +7,87 @@
 using namespace testing;
 using namespace std;
 
-class MockCalculator : public Calc {
+class BookingItem :public testing::Test {
+protected:
+	void SetUp() override {
+		NOT_ON_THE_HOUR = getTime(2021, 3, 26, 9, 5);
+		ON_THE_HOUR = getTime(2021, 3, 26, 9, 0);
+	}
 public:
-	MOCK_METHOD(int, getValue, (), (override));
-	MOCK_METHOD(int, getSum, (int, int), (override));
+	tm getTime(int year, int mon, int day, int hour, int min) {
+		tm result = { 0, min, hour, day, mon - 1, year - 1900, 0, 0, -1 };
+		mktime(&result);
+		return result;
+	}
+
+	tm plusHour(tm base, int hour) {
+		base.tm_hour += hour;
+		mktime(&base);
+		return base;
+	}
+
+	tm NOT_ON_THE_HOUR;
+	tm ON_THE_HOUR;
+	Customer CUSTOMER{ "Fake name", "010-1234-5678" };
+
+	const int UNDER_CAPACIRT = 1;
+	const int CAPACITY_PER_HOUR = 3;
+
+	BookingScheduler bookingScheduler{ CAPACITY_PER_HOUR };
 };
 
-TEST(a, DISABLED_b1) {
-	cout << "----------------" << endl;
-	MockCalculator calc;
-	
-	int expected = 10000;
-	//calc.getValue();
-	cout << "Stub ----------------" << endl;
-	EXPECT_CALL(calc, getValue())
-		.Times(2)
-		.WillRepeatedly(Return(expected));
+TEST_F(BookingItem, 예약은_정시에만_가능하다_정시가_아닌경우_예약불가) {
+	//arrange
+	Schedule* schedule = new Schedule{ NOT_ON_THE_HOUR, UNDER_CAPACIRT, CUSTOMER };
 
+	//act
+	EXPECT_THROW({
+		bookingScheduler.addSchedule(schedule);
+		}, std::runtime_error);
 
-	EXPECT_THAT(calc.getValue(), Eq(expected));
-	EXPECT_THAT(calc.getValue(), Eq(expected));
+	//assert
+	//expected runtime exception
 }
 
-TEST(a, b3) {
-	MockCalculator calc;
-	SUT sut{ &calc };
-	
-	EXPECT_CALL(calc, getSum(1, 2))
-		.Times(3);
+TEST_F(BookingItem, 예약은_정시에만_가능하다_정시인_경우_예약가능) {
+	//arrange
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, UNDER_CAPACIRT, CUSTOMER };
 
-	sut.go();
+	//act
+	bookingScheduler.addSchedule(schedule);
+
+	//assert
+	EXPECT_THAT(bookingScheduler.hasSchedule(schedule), Eq(true));
 }
 
-TEST(BookingSchedulerTest, 예약은_정시에만_가능하다_정시가_아닌경우_예약불가) {
-	BookingScheduler sche(3);
+TEST_F(BookingItem, 시간대별_인원제한이_있다_같은_시간대에_Capacity_초과할_경우_예외발생) {
+	//arrange
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER };
+	bookingScheduler.addSchedule(schedule);
+
+	//act
+	try {
+		Schedule* newSchedule = new Schedule{ ON_THE_HOUR, UNDER_CAPACIRT, CUSTOMER };
+		bookingScheduler.addSchedule(newSchedule);
+		FAIL(); // Exception이 발생할 예정이기에, FAIL() 함수에 도달하지 않는다.
+	}
+	catch (std::runtime_error& e) {
+		EXPECT_EQ(string{ e.what() }, string{ "Number of people is over restaurant capacity per hour" });
+	}
 }
 
-TEST(BookingSchedulerTest, 예약은_정시에만_가능하다_정시인_경우_예약가능) {
+TEST_F(BookingItem, 시간대별_인원제한이_있다_같은_시간대가_다르면_Capacity_차있어도_스케쥴_추가_성공) {
+	//arrange
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER };
+	bookingScheduler.addSchedule(schedule);
 
-}
+	//act
+	tm differenctHour = plusHour(ON_THE_HOUR, 1);
+	Schedule* newSchedule = new Schedule{ differenctHour, UNDER_CAPACIRT, CUSTOMER };
+	bookingScheduler.addSchedule(newSchedule);
 
-TEST(BookingSchedulerTest, 시간대별_인원제한이_있다_같은_시간대에_Capacity_초과할_경우_예외발생) {
-
-}
-
-TEST(BookingSchedulerTest, 시간대별_인원제한이_있다_같은_시간대가_다르면_Capacity_차있어도_스케쥴_추가_성공) {
-
+	EXPECT_EQ(true, bookingScheduler.hasSchedule(schedule));
+	EXPECT_EQ(true, bookingScheduler.hasSchedule(newSchedule));
 }
 
 TEST(BookingSchedulerTest, 예약완료시_SMS는_무조건_발송) {
