@@ -3,6 +3,7 @@
 #include <iostream>
 #include "../Project2/BookingScheduler.cpp"
 #include "TestableSmsSender.cpp"
+#include "TestableMailSender.cpp"
 
 using namespace testing;
 using namespace std;
@@ -12,6 +13,10 @@ protected:
 	void SetUp() override {
 		NOT_ON_THE_HOUR = getTime(2021, 3, 26, 9, 5);
 		ON_THE_HOUR = getTime(2021, 3, 26, 9, 0);
+
+		bookingScheduler.setSmsSender(&testableSmsSender);
+		bookingScheduler.setMailSender(&testableMailSender);
+
 	}
 public:
 	tm getTime(int year, int mon, int day, int hour, int min) {
@@ -29,11 +34,14 @@ public:
 	tm NOT_ON_THE_HOUR;
 	tm ON_THE_HOUR;
 	Customer CUSTOMER{ "Fake name", "010-1234-5678" };
+	Customer customerWithMail{ "Fake Name", "010-1234-5678", "test@test.com" };
 
 	const int UNDER_CAPACIRT = 1;
 	const int CAPACITY_PER_HOUR = 3;
 
 	BookingScheduler bookingScheduler{ CAPACITY_PER_HOUR };
+	TestableSmsSender testableSmsSender;
+	TestableMailSender testableMailSender;
 };
 
 TEST_F(BookingItem, 예약은_정시에만_가능하다_정시가_아닌경우_예약불가) {
@@ -92,9 +100,7 @@ TEST_F(BookingItem, 시간대별_인원제한이_있다_같은_시간대가_다르면_Capacity_차있�
 
 TEST_F(BookingItem, 예약완료시_SMS는_무조건_발송) {
 	//arrage
-	TestableSmsSender testableSmsSender;
 	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER };
-	bookingScheduler.setSmsSender(&testableSmsSender);
 
 	//act
 	bookingScheduler.addSchedule(schedule);
@@ -103,12 +109,26 @@ TEST_F(BookingItem, 예약완료시_SMS는_무조건_발송) {
 	EXPECT_EQ(true, testableSmsSender.isSendMethodIsCalled());
 }
 
-TEST(BookingSchedulerTest, 이메일이_없는_경우에는_이메일_미발송) {
+TEST_F(BookingItem, 이메일이_없는_경우에는_이메일_발송) {
+	//arrage
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER };
 
+	//act
+	bookingScheduler.addSchedule(schedule);
+
+	//assert
+	EXPECT_EQ(0, testableMailSender.getCountSendMailMethodIsCalled());
 }
 
-TEST(BookingSchedulerTest, 이메일이_있는_경우에는_이메일_발송) {
+TEST_F(BookingItem, 이메일이_있는_경우에는_이메일_발송) {
+	//arrage
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, customerWithMail };
 
+	//act
+	bookingScheduler.addSchedule(schedule);
+
+	//assert
+	EXPECT_EQ(1, testableMailSender.getCountSendMailMethodIsCalled());
 }
 
 TEST(BookingSchedulerTest, 현재날짜가_일요일인_경우_예약불가_예외처리) {
