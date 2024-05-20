@@ -4,8 +4,9 @@
 #include "../Project2/BookingScheduler.cpp"
 #include "TestableSmsSender.cpp"
 #include "TestableMailSender.cpp"
-#include "SundayBookingScheduler.cpp"
-#include "MondayBookingScheduler.cpp"
+//#include "SundayBookingScheduler.cpp"
+//#include "MondayBookingScheduler.cpp"
+#include "TestableBookingScheduler.cpp"
 
 using namespace testing;
 using namespace std;
@@ -15,6 +16,8 @@ protected:
 	void SetUp() override {
 		NOT_ON_THE_HOUR = getTime(2021, 3, 26, 9, 5);
 		ON_THE_HOUR = getTime(2021, 3, 26, 9, 0);
+		SUNDAY = getTime(2021, 3, 28, 17, 0);
+		MONDAY = getTime(2024, 6, 3, 17, 0);
 
 		bookingScheduler.setSmsSender(&testableSmsSender);
 		bookingScheduler.setMailSender(&testableMailSender);
@@ -44,6 +47,9 @@ public:
 	BookingScheduler bookingScheduler{ CAPACITY_PER_HOUR };
 	TestableSmsSender testableSmsSender;
 	TestableMailSender testableMailSender;
+
+	tm SUNDAY;
+	tm MONDAY;
 };
 
 TEST_F(BookingItem, 예약은_정시에만_가능하다_정시가_아닌경우_예약불가) {
@@ -135,12 +141,12 @@ TEST_F(BookingItem, 이메일이_있는_경우에는_이메일_발송) {
 
 TEST_F(BookingItem, 현재날짜가_일요일인_경우_예약불가_예외처리) {
 	//arrage
-	BookingScheduler* bookingScheduler = new SundayBookingSchduler{ CAPACITY_PER_HOUR };
+	TestableBookingScheduler* testableBookingScheduler = new TestableBookingScheduler{ CAPACITY_PER_HOUR, SUNDAY};
 	
 	try {
 		//act
 		Schedule* schedule = new Schedule{ ON_THE_HOUR, UNDER_CAPACIRT, CUSTOMER_WITH_MAIL };
-		bookingScheduler->addSchedule(schedule);
+		testableBookingScheduler->addSchedule(schedule);
 		FAIL();
 	}
 	catch (std::runtime_error& e) {
@@ -151,12 +157,12 @@ TEST_F(BookingItem, 현재날짜가_일요일인_경우_예약불가_예외처리) {
 
 TEST_F(BookingItem, 현재날짜가_일요일이_아닌경우_예약가능) {
 	//arrage
-	BookingScheduler* bookingScheduler = new MondayBookingSchduler{ CAPACITY_PER_HOUR };
+	TestableBookingScheduler* testableBookingScheduler = new TestableBookingScheduler{ CAPACITY_PER_HOUR, MONDAY };
 
 	//act
 	Schedule* schedule = new Schedule{ ON_THE_HOUR, UNDER_CAPACIRT, CUSTOMER_WITH_MAIL };
-	bookingScheduler->addSchedule(schedule);
+	testableBookingScheduler->addSchedule(schedule);
 	
 	//assert
-	EXPECT_EQ(true, bookingScheduler->hasSchedule(schedule));
+	EXPECT_EQ(true, testableBookingScheduler->hasSchedule(schedule));
 }

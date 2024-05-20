@@ -108,6 +108,7 @@
     </ClCompile>
     <ClCompile Include="TestableMailSender.cpp" />
     <ClCompile Include="TestableSmsSender.cpp" />
+    <ClCompile Include="TestableBookingScheduler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Project2\Project2.vcxproj">
