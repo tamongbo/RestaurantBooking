@@ -129,7 +129,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BookingScheduler.cpp" />
-    <ClCompile Include="calc.cpp" />
     <ClCompile Include="Customer.cpp" />
     <ClCompile Include="MailSender.cpp" />
     <ClCompile Include="main.cpp" />

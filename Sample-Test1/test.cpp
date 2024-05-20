@@ -1,8 +1,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
-#include "../Project2/calc.cpp"
 #include "../Project2/BookingScheduler.cpp"
+#include "TestableSmsSender.cpp"
 
 using namespace testing;
 using namespace std;
@@ -90,8 +90,17 @@ TEST_F(BookingItem, 시간대별_인원제한이_있다_같은_시간대가_다르면_Capacity_차있�
 	EXPECT_EQ(true, bookingScheduler.hasSchedule(newSchedule));
 }
 
-TEST(BookingSchedulerTest, 예약완료시_SMS는_무조건_발송) {
+TEST_F(BookingItem, 예약완료시_SMS는_무조건_발송) {
+	//arrage
+	TestableSmsSender testableSmsSender;
+	Schedule* schedule = new Schedule{ ON_THE_HOUR, CAPACITY_PER_HOUR, CUSTOMER };
+	bookingScheduler.setSmsSender(&testableSmsSender);
 
+	//act
+	bookingScheduler.addSchedule(schedule);
+
+	//assert
+	EXPECT_EQ(true, testableSmsSender.isSendMethodIsCalled());
 }
 
 TEST(BookingSchedulerTest, 이메일이_없는_경우에는_이메일_미발송) {
